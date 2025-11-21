@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ToDo List</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        light: {
+                            background: '#FAFAF8',
+                            text: '#333333',
+                            secondary: '#555555',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+        .slide-out {
+            animation: slideOut 0.3s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes slideOut {
+            from { opacity: 1; transform: translateX(0); }
+            to { opacity: 0; transform: translateX(100%); }
+        }
+        .completed {
+            text-decoration: line-through;
+            color: #888;
+        }
+    </style>
+</head>
+<body class="font-sans bg-light-background text-light-text min-h-screen">
+    <!-- Main Content -->
+    <div class="container mx-auto px-4 py-8 max-w-2xl">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-bold mb-2">ToDo List</h1>
+            <p class="text-light-secondary">Organize your tasks and boost productivity</p>
+            
+            <!-- Stats -->
+            <div class="flex justify-center space-x-6 mt-4">
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-blue-500" id="totalTasks">0</div>
+                    <div class="text-light-secondary text-sm">Total</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-green-500" id="completedTasks">0</div>
+                    <div class="text-light-secondary text-sm">Completed</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-orange-500" id="pendingTasks">0</div>
+                    <div class="text-light-secondary text-sm">Pending</div>
+                </div>
+            </div>
+        </header>
+
+        <main>
+            <!-- Add Item Section -->
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+                <div class="flex space-x-4">
+                    <input 
+                        id="itemInput" 
+                        type="text" 
+                        placeholder="What needs to be done?" 
+                        class="flex-grow px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                        onkeypress="handleKeyPress(event)"
+                    >
+                    <button 
+                        onclick="addItem()" 
+                        class="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition-all flex items-center"
+                    >
+                        <i class="fas fa-plus mr-2"></i>
+                        Add
+                    </button>
+                </div>
+                
+                <!-- Filter Buttons -->
+                <div class="flex space-x-2 mt-4">
+                    <button 
+                        id="filterAll" 
+                        onclick="setFilter('all')" 
+                        class="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium transition-colors"
+                    >
+                        All
+                    </button>
+                    <button 
+                        id="filterActive" 
+                        onclick="setFilter('active')" 
+                        class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-sm font-medium transition-colors"
+                    >
+                        Active
+                    </button>
+                    <button 
+                        id="filterCompleted" 
+                        onclick="setFilter('completed')" 
+                        class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-sm font-medium transition-colors"
+                    >
+                        Completed
+                    </button>
+                </div>
+            </div>
+
+            <!-- Items List -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-semibold">Tasks</h2>
+                    <button 
+                        onclick="clearCompleted()" 
+                        class="text-red-500 hover:text-red-700 text-sm font-medium transition-colors"
+                        id="clearCompletedBtn"
+                        style="display: none;"
+                    >
+                        Clear Completed
+                    </button>
+                </div>
+                
+                <div id="items" class="space-y-3">
+                    <!-- Items will be rendered here -->
+                    <div class="text-center py-8 text-light-secondary" id="emptyState">
+                        <i class="fas fa-clipboard-list text-4xl mb-3 opacity-50"></i>
+                        <p>No tasks yet. Add a task to get started!</p>
+                    </div>
+                </div>
+                
+                <!-- Bulk Actions -->
+                <div class="flex justify-between items-center mt-6 pt-4 border-t border-gray-200" id="bulkActions" style="display: none;">
+                    <span class="text-light-secondary text-sm" id="selectedCount">0 items selected</span>
+                    <div class="space-x-2">
+                        <button 
+                            onclick="markSelectedAsCompleted()" 
+                            class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white text-sm font-medium rounded-lg transition-colors"
+                        >
+                            Complete Selected
+                        </button>
+                        <button 
+                            onclick="deleteSelected()" 
+                            class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-colors"
+                        >
+                            Delete Selected
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="mt-12 text-center text-light-secondary">
+            <p>© 2025 • Developed by <a href="https://www.linkedin.com/in/suhaib-nadakkavil" target="_blank"
+                    class="text-light-secondary hover:text-light-text underline transition-colors">msn4u </a>
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        let items = [];
+        let selectedItems = new Set();
+        let currentFilter = 'all';
+        const storageKey = "items";
+
+        // DOM Elements
+        const itemsDiv = document.getElementById("items");
+        const input = document.getElementById("itemInput");
+        const emptyState = document.getElementById("emptyState");
+        const bulkActions = document.getElementById("bulkActions");
+        const selectedCount = document.getElementById("selectedCount");
+        const clearCompletedBtn = document.getElementById("clearCompletedBtn");
+        const totalTasksEl = document.getElementById("totalTasks");
+        const completedTasksEl = document.getElementById("completedTasks");
+        const pendingTasksEl = document.getElementById("pendingTasks");
+
+        // Filter buttons
+        const filterAll = document.getElementById("filterAll");
+        const filterActive = document.getElementById("filterActive");
+        const filterCompleted = document.getElementById("filterCompleted");
+
+        function renderItems() {
+            itemsDiv.innerHTML = '';
+            selectedItems.clear();
+            updateBulkActions();
+            
+            const filteredItems = items.filter(item => {
+                if (currentFilter === 'active') return !item.completed;
+                if (currentFilter === 'completed') return item.completed;
+                return true;
+            });
+            
+            if (filteredItems.length === 0) {
+                emptyState.style.display = 'block';
+                return;
+            }
+            
+            emptyState.style.display = 'none';
+            
+            for (const [idx, item] of Object.entries(filteredItems)) {
+                const originalIndex = items.findIndex(i => i.id === item.id);
+                const container = document.createElement("div");
+                container.className = `fade-in flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200`;
+                container.dataset.id = item.id;
+
+                const leftSection = document.createElement("div");
+                leftSection.className = "flex items-center space-x-3";
+
+                const checkbox = document.createElement("input");
+                checkbox.type = "checkbox";
+                checkbox.className = "w-4 h-4 text-blue-500 rounded focus:ring-blue-400";
+                checkbox.checked = selectedItems.has(item.id);
+                checkbox.onchange = () => toggleSelectItem(item.id, checkbox.checked);
+
+                const text = document.createElement("span");
+                text.className = `text-lg ${item.completed ? 'completed' : ''}`;
+                text.textContent = item.text;
+
+                // Edit functionality
+                text.onclick = () => enableEdit(originalIndex, text);
+
+                leftSection.appendChild(checkbox);
+                leftSection.appendChild(text);
+
+                const rightSection = document.createElement("div");
+                rightSection.className = "flex items-center space-x-2";
+
+                // Complete button
+                const completeBtn = document.createElement("button");
+                completeBtn.className = `p-2 rounded-full ${item.completed ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-500 hover:bg-green-100 hover:text-green-600'} transition-colors`;
+                completeBtn.innerHTML = `<i class="fas fa-check"></i>`;
+                completeBtn.onclick = () => toggleComplete(originalIndex);
+
+                // Delete button
+                const deleteBtn = document.createElement("button");
+                deleteBtn.className = "p-2 rounded-full bg-gray-100 text-gray-500 hover:bg-red-100 hover:text-red-600 transition-colors";
+                deleteBtn.innerHTML = `<i class="fas fa-trash"></i>`;
+                deleteBtn.onclick = () => removeItem(originalIndex);
+
+                rightSection.appendChild(completeBtn);
+                rightSection.appendChild(deleteBtn);
+
+                container.appendChild(leftSection);
+                container.appendChild(rightSection);
+                itemsDiv.appendChild(container);
+            }
+            
+            updateStats();
+            updateClearCompletedButton();
+        }
+
+        function updateStats() {
+            const total = items.length;
+            const completed = items.filter(item => item.completed).length;
+            const pending = total - completed;
+            
+            totalTasksEl.textContent = total;
+            completedTasksEl.textContent = completed;
+            pendingTasksEl.textContent = pending;
+        }
+
+        function updateClearCompletedButton() {
+            const hasCompleted = items.some(item => item.completed);
+            clearCompletedBtn.style.display = hasCompleted ? 'block' : 'none';
+        }
+
+        function toggleSelectItem(id, isSelected) {
+            if (isSelected) {
+                selectedItems.add(id);
+            } else {
+                selectedItems.delete(id);
+            }
+            updateBulkActions();
+        }
+
+        function updateBulkActions() {
+            if (selectedItems.size > 0) {
+                bulkActions.style.display = 'flex';
+                selectedCount.textContent = `${selectedItems.size} item${selectedItems.size > 1 ? 's' : ''} selected`;
+            } else {
+                bulkActions.style.display = 'none';
+            }
+        }
+
+        function markSelectedAsCompleted() {
+            items.forEach(item => {
+                if (selectedItems.has(item.id)) {
+                    item.completed = true;
+                }
+            });
+            renderItems();
+            saveItems();
+        }
+
+        function deleteSelected() {
+            items = items.filter(item => !selectedItems.has(item.id));
+            renderItems();
+            saveItems();
+        }
+
+        function enableEdit(index, textElement) {
+            const currentText = textElement.textContent;
+            const input = document.createElement("input");
+            input.type = "text";
+            input.value = currentText;
+            input.className = "border border-blue-300 rounded px-2 py-1";
+            
+            textElement.replaceWith(input);
+            input.focus();
+            
+            const saveEdit = () => {
+                const newText = input.value.trim();
+                if (newText && newText !== currentText) {
+                    items[index].text = newText;
+                    saveItems();
+                }
+                renderItems();
+            };
+            
+            input.onblur = saveEdit;
+            input.onkeypress = (e) => {
+                if (e.key === 'Enter') saveEdit();
+            };
+        }
+
+        function toggleComplete(index) {
+            items[index].completed = !items[index].completed;
+            renderItems();
+            saveItems();
+        }
+
+        function setFilter(filter) {
+            currentFilter = filter;
+            
+            // Update filter buttons
+            filterAll.className = filter === 'all' ? 
+                'px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium transition-colors' :
+                'px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-sm font-medium transition-colors';
+                
+            filterActive.className = filter === 'active' ? 
+                'px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium transition-colors' :
+                'px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-sm font-medium transition-colors';
+                
+            filterCompleted.className = filter === 'completed' ? 
+                'px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium transition-colors' :
+                'px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-sm font-medium transition-colors';
+            
+            renderItems();
+        }
+
+        function clearCompleted() {
+            items = items.filter(item => !item.completed);
+            renderItems();
+            saveItems();
+        }
+
+        function loadItems() {
+            const oldItems = localStorage.getItem(storageKey);
+            if (oldItems) {
+                items = JSON.parse(oldItems);
+                // Ensure each item has an id for selection
+                items.forEach((item, index) => {
+                    if (!item.id) item.id = Date.now() + index;
+                });
+            }
+            renderItems();
+        }
+
+        function saveItems() {
+            const stringItems = JSON.stringify(items);
+            localStorage.setItem(storageKey, stringItems);
+        }
+
+        function addItem() {
+            const value = input.value.trim();
+            if (!value) {
+                showAlert("You cannot add an empty task", "error");
+                return;
+            }
+            
+            const newItem = {
+                id: Date.now(),
+                text: value,
+                completed: false,
+                createdAt: new Date().toISOString()
+            };
+            
+            items.unshift(newItem);
+            renderItems();
+            input.value = "";
+            saveItems();
+            showAlert("Task added successfully!", "success");
+        }
+
+        function removeItem(index) {
+            const itemElement = document.querySelector(`[data-id="${items[index].id}"]`);
+            if (itemElement) {
+                itemElement.classList.add('slide-out');
+                setTimeout(() => {
+                    items.splice(index, 1);
+                    renderItems();
+                    saveItems();
+                    showAlert("Task deleted", "info");
+                }, 300);
+            }
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                addItem();
+            }
+        }
+
+        function showAlert(message, type) {
+            // Simple alert implementation - you could use a toast library for better UX
+            const colors = {
+                success: 'green',
+                error: 'red',
+                info: 'blue'
+            };
+            
+            console.log(`%c${message}`, `color: ${colors[type]}; font-weight: bold;`);
+        }
+
+        // Initialize
+        document.addEventListener("DOMContentLoaded", loadItems);
+    </script>
+</body>
+</html>
